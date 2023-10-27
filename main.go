@@ -6,15 +6,30 @@ import (
 
 // main is the entry point of the program.
 func main() {
-	// Create the genesis block.
-	genesisBlock := NewGenesisBlock()
+	// Create a new instance of the Blockchain struct
+	bc := NewBlockchain()
 
-	// Print the data of the genesis block.
-	fmt.Printf("Data: %s\n", genesisBlock.Data)
+	// Add a new block to the blockchain with the data "Send 1 BTC to Ivan"
+	bc.AddBlock("Send 1 BTC to Ivan")
 
-	// Print the previous hash of the genesis block.
-	fmt.Printf("Prev. Hash: %x\n", genesisBlock.PrevHash)
+	// Add another block to the blockchain with the data "Send 2 more BTC to Ivan"
+	bc.AddBlock("Send 2 more BTC to Ivan")
 
-	// Print the hash of the genesis block.
-	fmt.Printf("Hash: %x\n", genesisBlock.Hash)
+	// Iterate over each block in the blockchain
+	for _, block := range bc.blocks {
+		// Print the previous hash of the block
+		fmt.Printf("Prev. hash: %x\n", block.PrevHash)
+
+		// Print the data stored in the block
+		fmt.Printf("Data: %s\n", block.Data)
+
+		// Print the hash of the block
+		fmt.Printf("Hash: %x\n", block.Hash)
+
+		// Print the timestamp of the block
+		fmt.Printf("Timestamp: %d\n", block.Timestamp)
+
+		// Print a new line to separate each block
+		fmt.Println()
+	}
 }
