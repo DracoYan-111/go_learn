@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	blockchain "go_learn/block_chain"
 )
 
 // main is the entry point of the program.
 func main() {
 	// Create a new instance of the Blockchain struct
-	bc := NewBlockchain()
+	bc := blockchain.NewBlockchain()
 
 	// Add a new block to the blockchain with the data "Send 1 BTC to Ivan"
 	bc.AddBlock("Send 1 BTC to Ivan")
@@ -16,7 +17,9 @@ func main() {
 	bc.AddBlock("Send 2 more BTC to Ivan")
 
 	// Iterate over each block in the blockchain
-	for _, block := range bc.blocks {
+	for _, block := range bc.Blocks {
+		fmt.Printf("Index: %d\n", block.Index)
+
 		// Print the previous hash of the block
 		fmt.Printf("Prev. hash: %x\n", block.PrevHash)
 

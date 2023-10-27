@@ -1,13 +1,13 @@
-package main
+package block_chain
 
 type Blockchain struct {
-	blocks []*Block
+	Blocks []*Block
 }
 
 func (bc *Blockchain) AddBlock(data string) {
-	prveBlock := bc.blocks[len(bc.blocks)-1]
-	newBlock := NewBlock(data, prveBlock.Hash)
-	bc.blocks = append(bc.blocks, newBlock)
+	prveBlock := bc.Blocks[len(bc.Blocks)-1]
+	newBlock := NewBlock(prveBlock.Index, data, prveBlock.Hash)
+	bc.Blocks = append(bc.Blocks, newBlock)
 }
 
 func NewBlockchain() *Blockchain {
