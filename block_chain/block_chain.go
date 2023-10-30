@@ -16,7 +16,6 @@ func (bc *Blockchain) AddBlock(data string) {
 	if IsBlockValid(previousBlock, newBlock) {
 		// Append the new block to the blockchain.
 		bc.Blocks = append(bc.Blocks, newBlock)
-		replaceChain(bc, bc.Blocks)
 	}
 }
 
@@ -31,7 +30,7 @@ func NewBlockchain() *Blockchain {
 }
 
 // replaceChain replaces the blocks in the blockchain with a new chain if the new chain is longer.
-func replaceChain(bc *Blockchain, chain []*Block) {
+func ReplaceChain(bc *Blockchain, chain []*Block) {
 	// Check if the length of the new chain is greater than the length of the current blockchain's blocks.
 	if len(chain) > len(bc.Blocks) {
 		// If true, replace the blockchain's blocks with the new chain.
