@@ -2,8 +2,8 @@ package main
 
 import (
 	//"fmt"
-	blockchain "go_learn/block_chain"
-	websever "go_learn/web_sever"
+	blockchain "block_chain/block_chain"
+	websever "block_chain/web_sever"
 	"log"
 )
 
