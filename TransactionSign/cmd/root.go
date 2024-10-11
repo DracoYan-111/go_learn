@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	. "transaction_sign/cmd/config"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -48,7 +46,6 @@ func init() {
 	// 禁用默认的Help命令
 	RootCmd.SetHelpCommand(&cobra.Command{}) // 使用一个空命令替换 help 命令
 
-	RootCmd.AddCommand(ConfigCmd)
 }
 
 // initConfig 读取配置文件和 ENV 变量（如果设置）。
