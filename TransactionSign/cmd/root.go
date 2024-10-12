@@ -1,11 +1,30 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
+Copyright © 2024 DracoYan-111<yanlong2944@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 */
 package cmd
 
 import (
 	"fmt"
 	"os"
+	cmd "transaction_sign/cmd/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,69 +32,82 @@ import (
 
 var cfgFile string
 
-// RootCmd 表示在没有任何子命令的情况下调用的基本命令
-var RootCmd = &cobra.Command{
+// rootCmd 表示在没有任何子命令的情况下调用的基本命令
+var rootCmd = &cobra.Command{
 	Use:   "transaction_sign",
-	Short: "交易签名的命令行工具",
-	Long:  `使用go语言的Cobra框架实现的交易签名的命令行工具`,
-	//Run:   func(cmd *cobra.Command, args []string) {},
+	Short: "这是基于go语言实现的区块链交易签名的工具",
+	Long: `
+[ ▗▄▄▄▖ ▄▄▄ ▗▞▀▜▌▄▄▄▄   ▄▄▄ ▗▞▀▜▌▗▞▀▘   ■  ▄  ▄▄▄  ▄▄▄▄   ▗▄▄▖▄      ▄▄▄▄   ]
+[   █  █    ▝▚▄▟▌█   █ ▀▄▄  ▝▚▄▟▌▝▚▄▖▗▄▟▙▄▖▄ █   █ █   █ ▐▌   ▄      █   █  ]
+[   █  █         █   █ ▄▄▄▀            ▐▌  █ ▀▄▄▄▀ █   █  ▝▀▚▖█      █   █  ]
+[   █                                  ▐▌  █             ▗▄▄▞▘█  ▗▄▖        ]
+[                                      ▐▌                       ▐▌ ▐▌       ]
+[                                                                ▝▀▜▌       ]
+[                                                               ▐▙▄▞▘       ]
+	=====这是基于go语言实现的区块链交易签名的工具巴拉巴拉吧啦=====
+`,
+	Version: "v0.0.1",
 }
 
 // Execute 将所有子命令添加到根命令并适当设置标志。
-// 这由 main.main() 调用。它只需要对 RootCmd 发生一次。
+// 这由 main.main() 调用。它只需要对 rootCmd 发生一次。
 func Execute() {
-	err := RootCmd.Execute()
+	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
+// init 设置 root 命令的标志并添加 config 命令。
 func init() {
+	// 将 config 命令添加到 root 命令中。
+	rootCmd.AddCommand(cmd.ConfigCmd)
+
+	// 设置初始配置功能。
 	cobra.OnInitialize(initConfig)
 
-	// 您将在此定义标志和配置设置。
-	// Cobra 支持持久标志，如果在此定义，
-	// 对您的应用程序而言将是全局的。
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "任意命令带config即可查看config路径")
-	// 对help的介绍修改为中文。
-	RootCmd.Flags().BoolP("help", "h", false, "显示帮助信息，并查看所有可用命令的详细描述")
+	// 添加一个标志来指定配置文件。
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "specify a configuration file (default is: ./.config.env)")
 
-	// 禁用默认的Completion命令
-	RootCmd.CompletionOptions.DisableDefaultCmd = true
+	// 禁用默认Completion命令。
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
-	// 禁用默认的Help命令
-	RootCmd.SetHelpCommand(&cobra.Command{}) // 使用一个空命令替换 help 命令
+	// 将默认Help命令设置为空命令。
+	rootCmd.SetHelpCommand(&cobra.Command{})
 
+	// 添加标志来显示中文帮助。
+	rootCmd.Flags().BoolP("help", "h", false, "show help information and view detailed descriptions of all available commands")
 }
 
+/*
+   西红柿和牛腩其实是不可以一起吃的，
+   因为西红柿是红色的，而牛看到红色会发怒
+   容易使胃内壁受伤
+*/
 // initConfig 读取配置文件和 ENV 变量（如果设置）。
+// 如果配置文件不存在，则创建一个默认的，并打印出消息。
 func initConfig() {
 	if cfgFile != "" {
-		// 使用标志中的配置文件。
+		// 使用传入的配置文件。
 		viper.SetConfigFile(cfgFile)
 	} else {
-
-		// // 在主目录中搜索名为“.config”的配置。
-		viper.AddConfigPath("./")
-		viper.SetConfigType("env")
-		viper.SetConfigName(".config")
+		// 设置默认的配置文件名称
+		cfgFile = ".config.env"
+		viper.SetConfigFile(cfgFile)
 	}
 
-	viper.AutomaticEnv() // 读取匹配的环境变量
-
 	// 如果找到配置文件，则读取它。
+	// 如果找不到配置文件，则创建一个默认的
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "配置文件加载成功")
+		fmt.Println("配置文件加载成功")
 	} else {
 		for {
 			fmt.Println("配置文件不存在，是否创建?(y/n)")
-
 			var input string
 			fmt.Scanln(&input)
-
 			if input == "y" || input == "Y" {
 				// 创建配置文件
-				viper.WriteConfigAs("./.config.env")
+				viper.WriteConfigAs(cfgFile)
 				fmt.Println("配置文件创建成功")
 				break
 			} else if input == "n" || input == "N" {
@@ -85,7 +117,6 @@ func initConfig() {
 				fmt.Println("输入错误")
 				continue
 			}
-
 		}
 	}
 }
