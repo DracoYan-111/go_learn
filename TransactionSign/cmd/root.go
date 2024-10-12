@@ -26,6 +26,7 @@ import (
 	"os"
 	cmd "transaction_sign/cmd/config"
 
+	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,14 +37,8 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "transaction_sign",
 	Short: "这是基于go语言实现的区块链交易签名的工具",
-	Long: `
-[ ▗▄▄▄▖ ▄▄▄ ▗▞▀▜▌▄▄▄▄   ▄▄▄ ▗▞▀▜▌▗▞▀▘   ■  ▄  ▄▄▄  ▄▄▄▄   ▗▄▄▖▄      ▄▄▄▄   ]
-[   █  █    ▝▚▄▟▌█   █ ▀▄▄  ▝▚▄▟▌▝▚▄▖▗▄▟▙▄▖▄ █   █ █   █ ▐▌   ▄      █   █  ]
-[   █  █         █   █ ▄▄▄▀            ▐▌  █ ▀▄▄▄▀ █   █  ▝▀▚▖█      █   █  ]
-[   █                                  ▐▌  █             ▗▄▄▞▘█  ▗▄▖        ]
-[                                      ▐▌                       ▐▌ ▐▌       ]
-[                                                                ▝▀▜▌       ]
-[                                                               ▐▙▄▞▘       ]
+	Long: figure.NewFigure("TransactionSign", "larry3d", true).String() +
+		`
 	=====这是基于go语言实现的区块链交易签名的工具巴拉巴拉吧啦=====
 `,
 	Version: "v0.0.1",
