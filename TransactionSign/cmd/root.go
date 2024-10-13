@@ -24,7 +24,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	cmd "transaction_sign/cmd/config"
+	config "transaction_sign/cmd/config"
+	util "transaction_sign/cmd/util"
 
 	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
@@ -56,7 +57,8 @@ func Execute() {
 // init 设置 root 命令的标志并添加 config 命令。
 func init() {
 	// 将 config 命令添加到 root 命令中。
-	rootCmd.AddCommand(cmd.ConfigCmd)
+	rootCmd.AddCommand(config.ConfigCmd)
+	rootCmd.AddCommand(util.UtilCmd)
 
 	// 设置初始配置功能。
 	cobra.OnInitialize(initConfig)
