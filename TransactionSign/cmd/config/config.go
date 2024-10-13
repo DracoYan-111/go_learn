@@ -24,42 +24,21 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// config command
 var ConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configuration file related operations",
 	Long: `
 Here are configuration file related operations, including:
---getAll query all configuration items
---get string query the specified configuration item
---set string modify the specified configuration item
---del string delete the specified configuration item
 `,
 }
-
-// var exportConfigFile = &cobra.Command{
-// 	Use:   "export",
-// 	Short: "Export configuration file",
-// 	Long: `
-
-// 	`,
-// 	Run: func(cmd *cobra.Command, args []string) {
-
-// 		// 检查是否设置了 --getAll 参数
-// 		getAll, _ := cmd.Flags().GetBool("getAll")
-
-//			if getAll {
-//				for k, v := range viper.AllSettings() {
-//					fmt.Printf("%s=%v\n", k, v)
-//				}
-//			}
-//		},
-//	}
 
 var getConfigAll = &cobra.Command{
 	Use:   "getAll",
@@ -82,8 +61,12 @@ var getConfig = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		//检查是否设置了传入参数
 		if len(args) > 0 {
-			for _, v := range args {
-				fmt.Printf("%s=%v\n", v, viper.GetString(v))
+			for i, v := range args {
+				if viper.Get(v) != nil {
+					fmt.Printf("%s=%v\n", args[i], viper.GetString(v))
+				} else {
+					return errors.New("该配置项不存在")
+				}
 			}
 		} else {
 			return errors.New("请传入至少一个需要查询的配置项,多个使用空格分隔")
@@ -183,29 +166,34 @@ func init() {
 	delConfig.Flags().BoolP("key", "k", false, "config配置项KEY")
 }
 
-// TODO:删除配置文件未完成
 // deleteConfigCmd represents the deleteConfig command
-func deleteConfigCmd(key string) {
-	// newAllSettings := make(map[string]any)
+func deleteConfigCmd(key string) error {
 
-	// allSettings := viper.AllSettings()
+	newAllConfig := make(map[string]any, len(viper.AllSettings()))
+	for k, v := range viper.AllSettings() {
+		newAllConfig[k] = v
+	}
 
-	// for k, v := range allSettings {
-	// 	newAllSettings[k] = v
-	// }
+	delete(newAllConfig, key)
 
-	// delete(newAllSettings, "aaa")
+	files, err := os.Create(viper.ConfigFileUsed())
+	if err != nil {
+		return err
+	}
 
-	//viper.Reset()
+	defer files.Close()
+	viper.Reset()
 
-	// for _, v := range newAllSettings {
-	// 	fmt.Println(v)
-	// 	viper.Set(key, v)
-	// }
-	//viper.WriteConfig()
+	for k, v := range newAllConfig {
+		if _, ok := v.(string); !ok {
+			return fmt.Errorf("config value for key %q is not a string", k)
+		}
 
-	fmt.Println(viper.ConfigFileUsed())
-	viper.WriteConfigAs(viper.ConfigFileUsed())
-	// fmt.Println(viper.AllSettings())
+		viper.Set(k, v)
+		if _, err := files.WriteString(k + "=" + v.(string) + "\n"); err != nil {
+			return err
+		}
+	}
 
+	return viper.WriteConfig()
 }
