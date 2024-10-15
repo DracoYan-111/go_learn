@@ -25,7 +25,7 @@ var UtilCmd = &cobra.Command{
 }
 var unitMultipliers map[string]string
 
-// 单位转换
+// 单位转换 https://converter.murkin.me/
 var ethereumConverter = &cobra.Command{
 	Use:   "ethereum",
 	Short: "ethereum 单位转换器",
@@ -40,7 +40,9 @@ var ethereumConverter = &cobra.Command{
 	},
 }
 
-// 地址上色
+var colorAddressColor string
+
+// 地址上色 https://eth-colored-address.dnevend.site/
 var colorAddress = &cobra.Command{
 	Use:   "color",
 	Short: "给地址添加唯一的颜色",
@@ -50,8 +52,26 @@ var colorAddress = &cobra.Command{
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		checkAddressColor("0xa40c00E83a70243Cb8F2A7B0ce907d619F7f9ea3")
-		return nil
+		// 为地址赋予唯一的颜色
+		if colorAddressColor != "" {
+			err := checkAddressColor(colorAddressColor)
+			return err
+		}
+
+		// 地址区别对比
+		left, _ := cmd.Flags().GetBool("left")
+		right, _ := cmd.Flags().GetBool("right")
+
+		if left {
+			if right {
+				err := compareAndPrintStrings(args[0], args[1])
+				return err
+			} else {
+				return errors.New("请传入右侧需要对比的地址")
+			}
+		} else {
+			return errors.New("请传入左侧需要对比的地址")
+		}
 	},
 }
 
@@ -77,6 +97,9 @@ func init() {
 	ethereumConverter.Flags().BoolP("uint", "u", false, "数量单位")
 	ethereumConverter.Flags().BoolP("help", "h", false, "显示帮助信息")
 
+	colorAddress.Flags().StringVarP(&colorAddressColor, "address", "a", "", "要上色的地址")
+	colorAddress.Flags().BoolP("left", "l", false, "需要对比的左侧地址")
+	colorAddress.Flags().BoolP("right", "r", false, "需要对比的右侧地址")
 }
 
 // ========== 单位转换 ===============
@@ -153,25 +176,34 @@ func charToColor(c byte) string {
 }
 
 // 为输入的地址生成特有的颜色
-func checkAddressColor(input string) {
+func checkAddressColor(input string) error {
+	if len(input) != 42 {
+		return errors.New("请输入正确的地址")
+	}
 	var result string
 	for i := 0; i < len(input); i++ {
 		color := charToColor(input[i])
 		result += fmt.Sprintf("%s%c\033[0m", color, input[i])
 	}
 	fmt.Println(result)
+
+	return nil
 }
 
-func compareAndPrintStrings(str1, str2 string) {
+// 对比传入地址的区别并上色
+func compareAndPrintStrings(str1, str2 string) error {
 	// 两个字符串长度必须相等
 	if len(str1) != len(str2) {
-		fmt.Println("字符串长度不一致")
-		return
+		return errors.New("字符串长度不一致")
+	}
+
+	if len(str1) != 42 && len(str2) != 42 {
+		return errors.New("请检查地址的格式是否正确")
 	}
 
 	// 用于保存输出的两行
 	var line1, line2 string
-
+	var difference bool
 	// 逐字符对比两个字符串
 	for i := 0; i < len(str1); i++ {
 		char1 := str1[i]
@@ -183,6 +215,7 @@ func compareAndPrintStrings(str1, str2 string) {
 			color2 := charToColor(char2)
 			line1 += fmt.Sprintf("%s%c\033[0m", color1, char1)
 			line2 += fmt.Sprintf("%s%c\033[0m", color2, char2)
+			difference = true
 		} else {
 			// 相同字符直接添加到两行中
 			line1 += fmt.Sprintf("%c", char1)
@@ -190,7 +223,9 @@ func compareAndPrintStrings(str1, str2 string) {
 		}
 	}
 
-	// 打印两行字符串
-	fmt.Println(line1)
-	fmt.Println(line2)
+	// 打印两行字符串与是否存在区别
+	fmt.Println("是否存在区别:", difference)
+	fmt.Println("左侧地址:", line1)
+	fmt.Println("右侧地址:", line2)
+	return nil
 }
