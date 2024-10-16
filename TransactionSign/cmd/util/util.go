@@ -4,13 +4,20 @@ right © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"log"
 	"math/big"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/common-nighthawk/go-figure"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/sha3"
 )
@@ -119,6 +126,27 @@ var keccak256Cmd = &cobra.Command{
 	},
 }
 
+// 生成指定靓号
+var avatarCmd = &cobra.Command{
+	Use:   "avatar",
+	Short: "生成指定靓号",
+	Long: figure.NewFigure("Avatar", "larry3d", true).String() +
+		`
+=====生成指定靓号=====
+`,
+	Example: `
+--name/-n:需要生成的靓号
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("生成指定靓号")
+		privateKey, address := findVanityAddress("dac111", 30)
+		// Output the found private key and address
+		fmt.Printf("Found Address: %s\n", address)
+		fmt.Printf("Private Key: %x\n", crypto.FromECDSA(privateKey))
+		return nil
+	},
+}
+
 func init() {
 	// 定义单位精度
 	unitMultipliers = map[string]string{
@@ -137,6 +165,7 @@ func init() {
 	UtilCmd.AddCommand(ethereumConverter)
 	UtilCmd.AddCommand(colorAddress)
 	UtilCmd.AddCommand(keccak256Cmd)
+	UtilCmd.AddCommand(avatarCmd)
 
 	ethereumConverter.Flags().BoolP("number", "n", false, "转换数量")
 	ethereumConverter.Flags().BoolP("uint", "u", false, "数量单位")
@@ -284,4 +313,71 @@ func solidityKeccak256(data string) error {
 	hash.Write(dataByte)
 	fmt.Printf("Keccak-256 hash: %x\n", hash.Sum(nil))
 	return nil
+}
+
+// ========== 生成靓号 ===============
+func generateAddress() (*ecdsa.PrivateKey, string) {
+	privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+	if err != nil {
+		log.Fatalf("Failed to generate private key: %v", err)
+	}
+
+	publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("Failed to convert public key")
+	}
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	return privateKey, address
+}
+
+func findVanityAddress(prefix string, numWorkers int) (*ecdsa.PrivateKey, string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+	result := make(chan *ecdsa.PrivateKey, 1)
+	ticker := time.NewTicker(1 * time.Second)
+	start := time.Now()
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					privateKey, address := generateAddress()
+					if strings.HasPrefix(strings.ToLower(address[2:]), strings.ToLower(prefix)) {
+						result <- privateKey
+						return
+					}
+				}
+			}
+		}()
+	}
+
+	// 等待第一个符合条件的地址
+	go func() {
+		wg.Wait()
+		close(result)
+	}()
+
+	// 输出正在计算的秒数
+	for {
+		select {
+		case <-ticker.C:
+			elapsed := time.Since(start).Seconds()
+			fmt.Printf("\r正在计算: %.0fs", elapsed)
+
+		case privateKey := <-result:
+			if privateKey != nil {
+				fmt.Println() // 清理进度行
+				cancel()      // 取消其他 goroutine
+				return privateKey, crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
+			}
+		}
+	}
 }
