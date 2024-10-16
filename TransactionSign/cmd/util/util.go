@@ -12,6 +12,7 @@ import (
 
 	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/sha3"
 )
 
 // utilCmd represents the util command
@@ -33,6 +34,21 @@ var ethereumConverter = &cobra.Command{
 		`
 =====这是将单位转换为各个以太单位的工具=====
 `,
+	Example: `
+输入需要转换的数量和单位，例如以下的某一个单位:
+-n number -u wei
+-n number -u kwei
+-n number -u mwei
+-n number -u gwei
+-n number -u szabo
+-n number -u finney
+-n number -u ether
+-n number -u kether
+-n number -u mether
+-n number -u gether
+-n number -u tether
+
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("ethereum 单位转换器")
 		errors := checkInput(args)
@@ -49,6 +65,11 @@ var colorAddress = &cobra.Command{
 	Long: figure.NewFigure("Color", "larry3d", true).String() +
 		`
 =====给地址上色，可以看到地址的唯一颜色表示，也可对比两个地址有个不同
+`,
+	Example: `
+--address/-a:为地址赋予唯一的颜色
+--left/-l:需要对比的左侧地址
+--right/-r:需要对比的右侧地址
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -75,6 +96,29 @@ var colorAddress = &cobra.Command{
 	},
 }
 
+var keccak256Data string
+
+// keccak256
+var keccak256Cmd = &cobra.Command{
+	Use:   "keccak256",
+	Short: "keccak256 哈希函数",
+	Long: figure.NewFigure("Keccak256", "larry3d", true).String() +
+		`
+=====keccak256 哈希函数=====
+`,
+	Example: `
+--data/-a:需要计算的数据
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("keccak256 哈希函数")
+		if keccak256Data == "" {
+			return errors.New("请传入需要计算的数据")
+		}
+		errors := solidityKeccak256(keccak256Data)
+		return errors
+	},
+}
+
 func init() {
 	// 定义单位精度
 	unitMultipliers = map[string]string{
@@ -92,6 +136,7 @@ func init() {
 	}
 	UtilCmd.AddCommand(ethereumConverter)
 	UtilCmd.AddCommand(colorAddress)
+	UtilCmd.AddCommand(keccak256Cmd)
 
 	ethereumConverter.Flags().BoolP("number", "n", false, "转换数量")
 	ethereumConverter.Flags().BoolP("uint", "u", false, "数量单位")
@@ -100,6 +145,8 @@ func init() {
 	colorAddress.Flags().StringVarP(&colorAddressColor, "address", "a", "", "要上色的地址")
 	colorAddress.Flags().BoolP("left", "l", false, "需要对比的左侧地址")
 	colorAddress.Flags().BoolP("right", "r", false, "需要对比的右侧地址")
+
+	keccak256Cmd.Flags().StringVarP(&keccak256Data, "data", "d", "", "要计算的数据")
 }
 
 // ========== 单位转换 ===============
@@ -227,5 +274,14 @@ func compareAndPrintStrings(str1, str2 string) error {
 	fmt.Println("是否存在区别:", difference)
 	fmt.Println("左侧地址:", line1)
 	fmt.Println("右侧地址:", line2)
+	return nil
+}
+
+// ========== keccak_256 ===============
+func solidityKeccak256(data string) error {
+	dataByte := []byte(data)
+	hash := sha3.NewLegacyKeccak256() // 使用 Keccak 版本的 SHA3
+	hash.Write(dataByte)
+	fmt.Printf("Keccak-256 hash: %x\n", hash.Sum(nil))
 	return nil
 }
