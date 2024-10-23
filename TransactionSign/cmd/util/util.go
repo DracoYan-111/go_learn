@@ -317,41 +317,63 @@ func solidityKeccak256(data string) error {
 
 // ========== 生成靓号 ===============
 func generateAddress() (*ecdsa.PrivateKey, string) {
+	// 通过secp256k1和随机数生成私钥
 	privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
 	if err != nil {
 		log.Fatalf("Failed to generate private key: %v", err)
 	}
 
+	// 获取已经生成私钥的公钥
 	publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
 	if !ok {
 		log.Fatal("Failed to convert public key")
 	}
 
+	// 将公钥转换为地址
 	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
 	return privateKey, address
 }
 
+// 生成指定靓号
+//
+//	prefix: 需要生成的靓号的前缀
+//	numWorkers: 并发生成的 goroutine 数量
 func findVanityAddress(prefix string, numWorkers int) (*ecdsa.PrivateKey, string) {
+	// 1. 生成一个 context 和取消函数
+	//    Context 将被用于协调 goroutine 的结束
+	//    取消函数将在 defer 中被调用，以便在函数返回时关闭 context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// 2. 生成一个 WaitGroup，以便等待所有 goroutine 的完成
 	var wg sync.WaitGroup
+	// 3. 生成一个通道，以便 goroutine 将找到的私钥发送到这个通道
 	result := make(chan *ecdsa.PrivateKey, 1)
+	// 4. 生成一个 timer，以便每秒输出当前的计算时间
 	ticker := time.NewTicker(1 * time.Second)
+	// 5. 记录开始的时间，以便计算总的计算时间
 	start := time.Now()
 
+	// 6. 生成 numWorkers 个 goroutine，每个 goroutine 负责生成私钥
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func() {
+			// 6.1 等待 context 被取消
 			defer wg.Done()
 			for {
+				// 6.2 选择 context 是否被取消
 				select {
 				case <-ctx.Done():
+					// 6.2.1 如果被取消，直接返回
 					return
 				default:
+					// 6.2.2 如果没有被取消，生成一个私钥
 					privateKey, address := generateAddress()
+					// 6.2.3 如果生成的地址的前缀与 prefix 相同
 					if strings.HasPrefix(strings.ToLower(address[2:]), strings.ToLower(prefix)) {
+						// 6.2.3.1 将私钥发送到 result 通道
 						result <- privateKey
+						// 6.2.3.2 退出 goroutine
 						return
 					}
 				}
@@ -359,23 +381,29 @@ func findVanityAddress(prefix string, numWorkers int) (*ecdsa.PrivateKey, string
 		}()
 	}
 
-	// 等待第一个符合条件的地址
+	// 7. 等待第一个符合条件的地址
 	go func() {
 		wg.Wait()
+		// 7.1 等待所有 goroutine 完成后，关闭 result 通道
 		close(result)
 	}()
 
-	// 输出正在计算的秒数
+	// 8. 输出正在计算的秒数
 	for {
 		select {
 		case <-ticker.C:
+			// 8.1 每秒输出当前的计算时间
 			elapsed := time.Since(start).Seconds()
 			fmt.Printf("\r正在计算: %.0fs", elapsed)
 
 		case privateKey := <-result:
+			// 8.2 如果 result 通道中有私钥
 			if privateKey != nil {
-				fmt.Println() // 清理进度行
-				cancel()      // 取消其他 goroutine
+				// 8.2.1 打印一个空行，以便清理进度行
+				fmt.Println()
+				// 8.2.2 取消其他 goroutine
+				cancel()
+				// 8.2.3 返回私钥和对应的地址
 				return privateKey, crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
 			}
 		}
