@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -96,7 +97,7 @@ type Transaction struct {
 
 func processContent() error {
 	var transaction Transaction
-	if NetWork == "" || Private == "" || To == "" || Amount == "" {
+	if NetWork == "" || Private == "" || To == "" {
 		fmt.Println("网络、私钥、目标地址、数量不能为空")
 	} else {
 
@@ -145,45 +146,49 @@ func processContent() error {
 			*transaction.To = common.HexToAddress(To)
 		}
 
-		// 判断数量是否正确并转为rat
-		amountRat, bol := new(big.Rat).SetString(Amount)
-		if !bol {
-			return errors.New("请检查数量的格式是否正确")
-		}
+		if Amount != "" {
+			// 判断数量是否正确并转为rat
+			amountRat, bol := new(big.Rat).SetString(Amount)
+			if !bol {
+				return errors.New("请检查数量的格式是否正确")
+			}
 
-		// 判断是否存在单位
-		if Uints != "" {
-			if _, ok := unitMultipliers[Uints]; !ok {
-				return errors.New("请检查单位的格式是否正确")
-			} else {
-				if Uints == "wei" {
-					if strings.HasPrefix(Amount, "0.") {
-						return errors.New("单位为wei时不可以为小数")
+			// 判断是否存在单位
+			if Uints != "" {
+				if _, ok := unitMultipliers[Uints]; !ok {
+					return errors.New("请检查单位的格式是否正确")
+				} else {
+					if Uints == "wei" {
+						if strings.HasPrefix(Amount, "0.") {
+							return errors.New("单位为wei时不可以为小数")
+						}
 					}
-				}
-				// 获取输入的单位精度
-				uintsInt, _ := new(big.Int).SetString(unitMultipliers[Uints], 10)
-				// 将单位精度转换为Rat
-				uintsRat, _ := new(big.Rat).SetString(uintsInt.String())
-				// 将number与单位精度相乘
-				numberInWeiRat := new(big.Rat).Mul(amountRat, uintsRat)
+					// 获取输入的单位精度
+					uintsInt, _ := new(big.Int).SetString(unitMultipliers[Uints], 10)
+					// 将单位精度转换为Rat
+					uintsRat, _ := new(big.Rat).SetString(uintsInt.String())
+					// 将number与单位精度相乘
+					numberInWeiRat := new(big.Rat).Mul(amountRat, uintsRat)
 
-				// 将wei单位的精度相除
-				uintsIntWei, _ := new(big.Int).SetString(unitMultipliers["wei"], 10)
-				result := new(big.Rat).Quo(numberInWeiRat, new(big.Rat).SetInt(uintsIntWei)).FloatString(30)
-				//  检查result是否包含".""如何包含将去除末尾的0与.
-				if strings.Contains(result, ".") {
-					result = strings.TrimRight(result, "0")
-					result = strings.TrimRight(result, ".")
+					// 将wei单位的精度相除
+					uintsIntWei, _ := new(big.Int).SetString(unitMultipliers["wei"], 10)
+					result := new(big.Rat).Quo(numberInWeiRat, new(big.Rat).SetInt(uintsIntWei)).FloatString(30)
+					//  检查result是否包含".""如何包含将去除末尾的0与.
+					if strings.Contains(result, ".") {
+						result = strings.TrimRight(result, "0")
+						result = strings.TrimRight(result, ".")
+					}
+					transaction.Amount, _ = new(big.Int).SetString(result, 10)
 				}
-				transaction.Amount, _ = new(big.Int).SetString(result, 10)
+			} else {
+				if strings.HasPrefix(Amount, "0.") {
+					return errors.New("单位为wei时不可以为小数")
+				}
+				amounts, _ := new(big.Int).SetString(Amount, 10)
+				transaction.Amount = amounts
 			}
 		} else {
-			if strings.HasPrefix(Amount, "0.") {
-				return errors.New("单位为wei时不可以为小数")
-			}
-			amounts, _ := new(big.Int).SetString(Amount, 10)
-			transaction.Amount = amounts
+			transaction.Amount = big.NewInt(0)
 		}
 
 		// 判断nonce是否存在
@@ -196,7 +201,17 @@ func processContent() error {
 
 		// 判断data是否存在
 		if Data != "" {
-			transaction.Data = []byte(Data)
+			if strings.HasPrefix(Data, "0x") {
+				// 将输入的十六进制字符串转为字节数组
+				decodedData, err := hex.DecodeString(Data[2:]) // 去掉"0x"前缀
+				if err != nil {
+					return errors.New("Failed to decode data")
+				}
+				transaction.Data = decodedData
+			} else {
+				transaction.Data = []byte(Data)
+			}
+
 		} else {
 			transaction.Data = nil
 		}
